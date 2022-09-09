@@ -54,26 +54,31 @@ def get_scaling_factors_for_phi_theta():
     C_theta = [0.430, 0.594, 0.697, 0.889, 0.957, 1.031, 1.104, 1.1088, 1.184, 1.178]
     return C_phi, C_theta
 
-def get_cluster_spread(scenario:str, link_state:int, elev_angle:int):
-    elv_idx = elev_angle/10 -1
+def get_cluster_spread(scenario:str, link_state:list(), elev_angle:list()):
+    elv_idx = np.array(elev_angle/10 -1, dtype = int)
     if scenario == 'rural':
-        if link_state == 1: #if LOS
-            table = np.array([
-                [np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan],
-                [0.39,	0.31,	0.29,	0.37,	0.61,	0.9,	1.43,	2.87,	5.48],
-                [10.81,	8.09,	13.7,	20.05,	24.51,	26.35,	31.84,	36.62,	36.77],
-                [1.94,	1.83,	2.28,	2.93,	2.84,	3.17,	3.88,	4.17,	4.29]
-                ])
-        else: # NLOS CASE
-            table = np.array([
-                [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,np.nan, np.nan,np.nan],
-                [0.03,	0.05,	0.07,	0.1,	0.15,	0.22,	0.5,	1.04,	2.11],
-                [18.16,	26.82,	21.99,	22.86,	25.93,	27.79,	28.5,	37.53,	29.23],
-                [2.32,	7.34,	8.28,	8.76,	9.68,	9.94,	8.9,	13.74,	12.16],
-                ])
-            
-    values = table[:,elv_idx]
-    return {'C_DS':values[0], 'C_ASD':values[1], 'C_ASA':values[2],'C_ZSA':values[3]}
+        los_table = np.array([
+            [np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan,	np.nan],
+            [0.39,	0.31,	0.29,	0.37,	0.61,	0.9,	1.43,	2.87,	5.48],
+            [10.81,	8.09,	13.7,	20.05,	24.51,	26.35,	31.84,	36.62,	36.77],
+            [1.94,	1.83,	2.28,	2.93,	2.84,	3.17,	3.88,	4.17,	4.29]
+            ])
+        nlos_table = np.array([
+            [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,np.nan, np.nan,np.nan],
+            [0.03,	0.05,	0.07,	0.1,	0.15,	0.22,	0.5,	1.04,	2.11],
+            [18.16,	26.82,	21.99,	22.86,	25.93,	27.79,	28.5,	37.53,	29.23],
+            [2.32,	7.34,	8.28,	8.76,	9.68,	9.94,	8.9,	13.74,	12.16],
+            ])
+    values = np.zeros(shape=[4,len(link_state)])
+    for i, link_state_i in enumerate(link_state):
+       if link_state_i ==1:
+           values[:,i] = los_table[:, elv_idx[i]]
+       else:
+           values[:,i] = nlos_table[:, elv_idx[i]]
+    #return {'C_DS':values[0], 'C_ASD':values[1], 'C_ASA':values[2],'C_ZSA':values[3]}
+    return {'C_DS':values[0,:], 'C_ASD':np.repeat([0], len(link_state)), 
+            'C_ASA':values[2,:],'C_ZSA':values[3,:]}
+
 
 def get_shadowing_params(scenario:str, elev_angle:list()):
     elev_angle = np.array(elev_angle)
@@ -110,6 +115,7 @@ def get_shadowing_params(scenario:str, elev_angle:list()):
 
 def get_correlation_spread(scenario:str, link_state:list(), elev_angle:list()):
     link_state = np.array(link_state)
+    
     elev_angle = np.array(elev_angle)
     ## 3gpp 38.811, table 6.7.2 - 7a
     #### 10  20  30   40  50 60 70 80 90

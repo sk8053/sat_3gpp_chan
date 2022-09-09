@@ -41,11 +41,13 @@ def step5_and_step6(scenario:str, DS:list(), K:list(),  elev_angle:list(), link_
     # step 6, Generate cluster powers
     # cluster powers are cacluated assuming a single slop exponential delay profile
     P_n_list = []
+    P_n_list_without_K = []
     for i,link_state_i in enumerate(link_state):    
         Z_n = np.random.normal(0, 3)   
         P_n_prime = np.exp(-tau_n_list[i]*(r_tau[i]-1)/(r_tau[i]*DS[i]))*10**(-Z_n/10)    
         #normalize the cluster power so that the sum of all cluster power is equal to one
         P_n = P_n_prime/np.sum(P_n_prime)
+        P_n_list_without_K.append(P_n)
         if link_state_i ==1: #if LOS
             P_n[0] += K[i]/(K[i]+1)
             P_n[1:] *= 1/(K[i]+1)
@@ -53,4 +55,4 @@ def step5_and_step6(scenario:str, DS:list(), K:list(),  elev_angle:list(), link_
     
     # remove cluster with less than -25 dB power compared to the maximum cluster power
     #################### 
-    return tau_n_list, P_n_list
+    return tau_n_list, P_n_list, P_n_list_without_K

@@ -21,11 +21,21 @@ def get_link_state(elev_angle, scenario = 'rural'):
     
     return get_los_prob(scenario, elev_angle)
 
-def get_path_loss(height:int, elev_angle:list(), f_c:int, link_state:list(), scenario:str = 'rural'):
+def step2_and_step3(height:int, elev_angle:list(), f_c:int, scenario:str = 'rural'):
     # return path loss values corresponding to elevation angles and linnk states
     R_E = 6371e3 # [m]
     elev_angle = np.array(elev_angle)
-    link_state = np.array (link_state)
+    
+    los_prob = get_link_state(elev_angle, scenario)/100
+    uniform_rand_v = np.random.uniform(0,1,len(los_prob))
+    link_state= np.ones_like(los_prob)
+    
+    for i, link_state_i in enumerate(link_state):
+        los_prob_i = los_prob[i]
+        uniform_rand_v_i = uniform_rand_v[i]
+        if uniform_rand_v_i > los_prob_i: #
+            link_state[i] =2
+    
     d = np.sqrt(R_E**2 * np.sin(np.deg2rad(elev_angle))**2 + height**2 + 2*height*R_E)- R_E*np.sin(np.deg2rad(elev_angle))
     # f_c in Ghz, d in m
     fspl = 32.45 + 20*np.log10(f_c/1e9) + 20*np.log10(d)
@@ -73,8 +83,8 @@ def get_path_loss(height:int, elev_angle:list(), f_c:int, link_state:list(), sce
     PL_a = A_zenith/np.sin(np.deg2rad(elev_angle))
     PL_a = 10*np.log10(PL_a)
     
-    Path_loss = PL_b + PL_a
+    path_loss = PL_b + PL_a
     # we will ignore the attenuation 
     #due to either ionospheric or trospheric scintillation loss
-    return Path_loss
+    return path_loss, link_state
 

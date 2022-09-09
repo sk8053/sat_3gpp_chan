@@ -25,8 +25,8 @@ def compute_LOS_angle(Tx_loc:list(), Rx_loc:list()):
     LOS_ZOA_theta = 180-LOS_ZOD_theta
     
     return LOS_AOD_phi, LOS_ZOD_theta, LOS_AOA_phi, LOS_ZOA_theta
-def GCS_LSC_conversion():
-    return
+
+
 def step1():
     # choose one of the scenarios 
     scenario = 'rural'
@@ -43,6 +43,6 @@ def step1():
     LOS_AOD, LOS_ZOD, LOS_AOA, LOS_ZOA = compute_LOS_angle(sat_location, UE_location)
     
     LOS_angles = [{'AOD':LOS_AOD[i],'AOA':LOS_AOA[i],'ZOD':LOS_ZOD[i], 'ZOA':LOS_ZOA[i]} \
-     for i in range(n_UE)]
+    for i in range(n_UE)]
         
     return LOS_angles
