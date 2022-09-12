@@ -42,11 +42,11 @@ def GCS_LCS_conversion(rot_angle:dict(), theta:list(), phi:list()):
     # return angles are all radians
     return local_angle, Psi
 
-def sate_antenna_power_pattern(theta:list(), radius:float, f_c:float=2e9):
+def sat_antenna_power_pattern(theta:list(), radius:float, f_c:float=2e9):
     # antenna element gain by 3GPP 38.811, 6.4.1
     
     # theta, phi are radians
-    
+    theta = np.squeeze(theta)
     k = 2*np.pi*f_c/sc.speed_of_light
     
     g = np.zeros(len(theta))
@@ -55,22 +55,37 @@ def sate_antenna_power_pattern(theta:list(), radius:float, f_c:float=2e9):
     x = k*radius*np.sin(theta[theta !=0])
     g[theta !=0 ] = 4 *np.abs(y/x)**2
     # return power, i.e., element gain of one antenna
+
     return g
 
-def ue_antenna_power_pattern(theta:list(), phi:list()):
+def ue_antenna_power_pattern(theta:list(), phi:list(), ant_pattern:str = "quasi-isotropic"):
     # we assume that UE element pattern is quasi-Isotropic according to 3GPP 38.811, 6.4.2
     # 3GPP 38.811,6.10.1, Note 4
     # Quasi isotropic refers to dipole antenna which is omini-directional in one plane
     # let's use very simple one, sin(theta)^2,
     # which is omini-directional across all azimuth angles, phi
     
-    g = np.sin(theta)**2   
+    if ant_pattern == 'isotropic':
+        g =  [1]*len(theta)
+    elif ant_pattern == 'quasi-isotropic':
+        g = np.sin(theta)**2
+       
     return g
 
-def get_sate_antenna_field_pattern(theta:list(), phi:list(), radius:float, f_c:float):
+def sph2cart(r:list(), theta:list(), phi:list()):
+     # all input angles are radian
+     return np.array([r*np.sin(theta)*np.cos(phi), r*np.sin(theta)*np.sin(phi), r*np.cos(theta)])
+
+def get_sat_antenna_field_pattern(theta:list(), phi:list(),
+                                   beam_direction:list(), radius:float, f_c:float
+                                   , return_gain:bool = False):
     # theta, phi are radians
-    
-    g = sate_antenna_power_pattern(theta, radius, f_c)
+    # beam_direction: [x,y,z], boresight direction of satellite antenna
+    xyz_array = sph2cart(1, theta, phi) # (3, number of thetas)
+    beam_direction = beam_direction/np.linalg.norm(beam_direction)
+    # get angle between departure ray and boresight direction of satelliet antenna
+    theta = np.arccos(xyz_array.T.dot(beam_direction))
+    g = sat_antenna_power_pattern(theta, radius, f_c)
     # relationship between power pattern and field pattern 
     # g = |F_theta|^2 + |F_phi|^2 # 3GPP 38.901, 7.3.2
     # assume circular polarization 
@@ -79,10 +94,13 @@ def get_sate_antenna_field_pattern(theta:list(), phi:list(), radius:float, f_c:f
     
     F_vec = np.vstack((F_theta, F_phi))
     
-    return F_vec
+    if return_gain is False:
+        return F_vec
+    else:
+        return F_vec, g
 
 def get_ue_antenna_field_pattern(theta:list(), phi:list(), rot_angle:dict()
-                                 , slant_angle:float):
+                                 , slant_angle:float, ant_pattern:str = 'quasi-isotropic'):
     # theta, phi are radians
     
     # first get local angle in the coordinate system of UE
@@ -100,7 +118,7 @@ def get_ue_antenna_field_pattern(theta:list(), phi:list(), rot_angle:dict()
     theta_two_prime, phi_two_prime = local_angle2['theta_prime'], local_angle2['phi_prime']
     
     # get power pattern with the obtained local angles
-    g = ue_antenna_power_pattern(theta_two_prime, phi_two_prime)
+    g = ue_antenna_power_pattern(theta_two_prime, phi_two_prime, ant_pattern=ant_pattern)
     # relationship between power pattern and field pattern 
     # g = |F_theta|^2 + |F_phi|^2 # 3GPP 38.901, 7.3.2
     

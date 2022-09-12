@@ -7,24 +7,27 @@ Created on Fri Sep  9 11:32:18 2022
 import numpy as np
 import scipy.constants as sc
 import three_gpp_tables_s_band as th_gpp_T
-from get_antenna_field_patterns import get_ue_antenna_field_pattern, get_sate_antenna_field_pattern
+from get_antenna_field_patterns import get_ue_antenna_field_pattern, get_sat_antenna_field_pattern
 
 class sat_three_gpp_channel_model(object):
     
-    def __init__(self,scenario:str, sat_location:list(), ue_location:list(), f_c:float):
+    def __init__(self,scenario:str, sat_location:list(), ue_location:list(),
+                  sat_beam_direction:list(), f_c:float, ue_ant_pattern:str= 'quasi-isotropic'):
         
         # set scenarios and locations of satellite and ue
         
         self.scenario = scenario
         self.sat_location = sat_location
+        self.sat_beam_direction = sat_beam_direction
         self.ue_location = ue_location
         self.sat_ant_radius = 1
         self.f_c = f_c
-        
+        self.ue_ant_pattern = ue_ant_pattern
         self.r_velocity = np.repeat([[1,1,1]], len(self.ue_location), axis =0)
         self.ant_slant_angle_list = [45, -45]
         
         self.time = 0
+        self.force_LOS = False
         
     def compute_LOS_angle(self,Tx_loc:list(), Rx_loc:list()):
         dist_vec = Rx_loc - Tx_loc
@@ -33,21 +36,21 @@ class sat_three_gpp_channel_model(object):
         #R_2d = np.sqrt(dist_vec[:,0]**2 + dist_vec[:,1]**2)
         # azimuth angle of departure
         LOS_AOD_phi = np.arctan2(dist_vec[:,1], dist_vec[:,0])*180/np.pi
-        LOS_AOD_phi[LOS_AOD_phi<0] += 360
-        LOS_AOD_phi[LOS_AOD_phi>360] -=360
+        #LOS_AOD_phi[LOS_AOD_phi<0] += 360
+        #LOS_AOD_phi[LOS_AOD_phi>360] -=360
         # zenith angle of departure
         LOS_ZOD_theta = np.arccos(dist_vec[:,2]/R_3d)*180/np.pi
         # azimuth angle of arrival
         LOS_AOA_phi = LOS_AOD_phi
-        LOS_AOA_phi[LOS_AOA_phi<0] += 360
-        LOS_AOA_phi[LOS_AOA_phi>360] -=360
+        #LOS_AOA_phi[LOS_AOA_phi<0] += 360
+        #LOS_AOA_phi[LOS_AOA_phi>360] -=360
         # zenith angle of arrival
         LOS_ZOA_theta = 180-LOS_ZOD_theta
         
         return LOS_AOD_phi, LOS_ZOD_theta, LOS_AOA_phi, LOS_ZOA_theta
 
 
-    def step1(self):
+    def step1(self, return_sat_gain = False):
         
         # b) Give number of sat and UE
         #n_sat = 1
@@ -59,14 +62,31 @@ class sat_three_gpp_channel_model(object):
         #UE_location = np.column_stack((UE_location_xy, UE_z))
         
         # the unit of LOS angles is degree
-        LOS_AOD, LOS_ZOD, LOS_AOA, LOS_ZOA = self.compute_LOS_angle(self.sat_location, self.ue_location)
+        LOS_AOD, LOS_ZOD, LOS_AOA, LOS_ZOA = \
+            self.compute_LOS_angle(self.sat_location, self.ue_location)
+
+        sat_height = self.sat_location[0][2]
         
-        self.elev_angle = 90 - LOS_ZOA # [deg]
+        R_E= 6371e3
+        d = np.linalg.norm(self.ue_location - self.sat_location, axis = 1)
+        
+        self.elev_angle = np.arcsin((sat_height**2 + 2*sat_height*R_E - d**2)/(2*R_E*d)) # [rad]
+        self.elev_angle = np.rad2deg(self.elev_angle) #[deg]
         self.elev_angle_ref = self.find_near_ref_angle(self.elev_angle)
         
         self.LOS_angles = [{'AOD':LOS_AOD[i],'AOA':LOS_AOA[i],'ZOD':LOS_ZOD[i], 'ZOA':LOS_ZOA[i]} \
         for i in range(n_UE)]
+        if return_sat_gain is True:
+            LOS_AOD = np.array(LOS_AOD)
+            LOS_ZOD = np.array(LOS_ZOD)
+            _, sat_ant_gain_los = get_sat_antenna_field_pattern(np.array([LOS_ZOD*np.pi/180]), 
+                                                   np.array([LOS_AOD*np.pi/180]),
+                                                   self.sat_beam_direction,
+                                                   self.sat_ant_radius, 
+                                                   self.f_c,
+                                                   return_gain= True)
             
+            return sat_ant_gain_los
         
     def find_near_ref_angle(self, angle:list()):
         # find reference elevation angle that is nearest to original one
@@ -79,15 +99,17 @@ class sat_three_gpp_channel_model(object):
     def get_link_state(self,elev_angle:list(), scenario = 'rural'):
         # return link states for each elevation angle
         elev_angle_ref = self.find_near_ref_angle(elev_angle)
-        
-        return th_gpp_T.get_los_prob(scenario, elev_angle_ref)
+        if self.force_LOS is False:
+            return th_gpp_T.get_los_prob(scenario, elev_angle_ref)
+        else:
+            return np.repeat([100], len(elev_angle_ref))
 
     def step2_and_step3(self):
         # return path loss values corresponding to elevation angles and linnk states
         R_E = 6371e3 # [m]
-        elev_angle = np.array(self.elev_angle)
+       
         height = self.sat_location[:,2]
-        los_prob = self.get_link_state(elev_angle, self.scenario)/100
+        los_prob = self.get_link_state(self.elev_angle, self.scenario)/100
         uniform_rand_v = np.random.uniform(0,1,len(los_prob))
         link_state= np.ones_like(los_prob)
         
@@ -97,9 +119,10 @@ class sat_three_gpp_channel_model(object):
             if uniform_rand_v_i > los_prob_i: #
                 link_state[i] =2
         
-        d = np.sqrt(R_E**2 * np.sin(np.deg2rad(elev_angle))**2 + height**2 + 2*height*R_E)- R_E*np.sin(np.deg2rad(elev_angle))
+        #d = np.sqrt(R_E**2 * np.sin(np.deg2rad(self.elev_angle))**2 + height**2 + 2*height*R_E)- R_E*np.sin(np.deg2rad(self.elev_angle))
+        distance = np.linalg.norm(self.ue_location - self.sat_location, axis = 1) #[m]
         # f_c in Ghz, d in m
-        fspl = 32.45 + 20*np.log10(self.f_c/1e9) + 20*np.log10(d)
+        fspl = 32.45 + 20*np.log10(self.f_c/1e9) + 20*np.log10(distance)
         # find ref elevation angle
         shadow_CL_table = th_gpp_T.get_shadowing_params(self.scenario, self.elev_angle_ref)
         
@@ -112,9 +135,9 @@ class sat_three_gpp_channel_model(object):
         # compute basic pathloss
         PL_b = np.zeros_like(fspl)
         PL_b[link_state==1] = fspl[link_state==1] \
-        + sigma_los*np.random.normal(0,1, np.sum(link_state==1))
+        + np.random.normal(0,sigma_los, np.sum(link_state==1))
         PL_b[link_state==2] = fspl[link_state==2]  \
-        + sigma_nlos*np.random.normal(0,1, np.sum(link_state==2)) + CL
+        + np.random.normal(0,sigma_nlos, np.sum(link_state==2)) + CL
             
         ## attenuation due to atmophere following ITU-R P.676
         # https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.676-13-202208-I!!PDF-E.pdf
@@ -122,7 +145,7 @@ class sat_three_gpp_channel_model(object):
         p = 1013.25 # hPa
         ro = 7.5 # 7.5g / m^3
         e = 9.98 # hPa, additonal pressuer due to water vapor
-        ro_gas = 1 # assume no attenuation due to oxigen
+        # specific gaseous attenuation attributable to oxygen, in dB/km
         # read coefficient from 
         # https://www.itu.int/dms_pub/itu-r/oth/11/01/R11010000020001TXTM.txt
         if self.f_c < 10e9:
@@ -131,6 +154,10 @@ class sat_three_gpp_channel_model(object):
             b = 2.71e-2
             c = -2.53e-4
             d = -2.83e-4
+            
+            # Rec. ITU R  P.676 13, FIGURE 1
+            ro_gas =  0.0069 # [dB/Km]  assume approximated value
+            
         else:
             # take values corresponding to 28GHz
             a = -2.43
@@ -138,11 +165,14 @@ class sat_three_gpp_channel_model(object):
             c = -6.168e-4
             d = -9.517e-4
             
-        h_0 = a +b*T + c*p + d*ro    
+            # Rec. ITU R  P.676 13, FIGURE 1
+            ro_gas =  0.1104# [dB/Km]  assume approximated value
+            
+        h_0 = a +b*T + c*p + d*ro
+      
         A_zenith = (ro_gas * h_0)
-        PL_a = A_zenith/np.sin(np.deg2rad(elev_angle))
-        PL_a = 10*np.log10(PL_a)
-        
+        PL_a = A_zenith/np.sin(np.deg2rad(self.elev_angle))
+        #PL_a = 10*np.log10(PL_a)
         path_loss = PL_b + PL_a
         # we will ignore the attenuation 
         #due to either ionospheric or trospheric scintillation loss
@@ -465,7 +495,7 @@ class sat_three_gpp_channel_model(object):
             K = 10**(0.1*X)
             self.angle_data[i]['XPR'] = K
     
-    def car2sph(self, r:float, theta:float, phi:float):
+    def sph2cart(self, r:float, theta:float, phi:float):
         # all input angles are radian
         return np.array([r*np.sin(theta)*np.cos(phi), r*np.sin(theta)*np.sin(phi), r*np.cos(theta)])
     
@@ -483,6 +513,8 @@ class sat_three_gpp_channel_model(object):
        # channels and delays corresponding to each X-pol antenna
        H_per_crossed_ant = {}
        delay_per_crossed_ant = {}
+       #self.los_sat_ant_gain = {} # this variable is used for only verification
+       
        # get channel for each antenna from X-pole antennas
        for slant_angle in self.ant_slant_angle_list:
            delay_n_list = [] # list containing all the cluster delays for each link
@@ -519,7 +551,11 @@ class sat_three_gpp_channel_model(object):
                    # return-shape is (2,n_rays)
                    # set all input angles as radians because the generated angles are in degree
                    F_vec_ue_list = get_ue_antenna_field_pattern(theta_ZOA[:,n]*np.pi/180, phi_AOA[:,n]*np.pi/180, ue_rot_angle, slant_angle*np.pi/180)
-                   F_vec_sat_list = get_sate_antenna_field_pattern(theta_ZOD[:,n]*np.pi/180, phi_AOD[:,n]*np.pi/180, self.sat_ant_radius, self.f_c)
+                   F_vec_sat_list = get_sat_antenna_field_pattern(theta_ZOD[:,n]*np.pi/180,
+                                                                   phi_AOD[:,n]*np.pi/180, 
+                                                                   self.sat_beam_direction,
+                                                                   self.sat_ant_radius, 
+                                                                   self.f_c)
                    P_n = self.P_n_list_without_K[i][n]
                    
                    for k in range(n_rays):
@@ -529,8 +565,8 @@ class sat_three_gpp_channel_model(object):
                                              [np.sqrt(1/kappa[k,n])*np.exp(1j*PT[k,n]), np.exp(1j*PP[k,n])]])
                        
                        
-                       r_tx = self.car2sph(1, phi_AOD[k,n]*np.pi/180, theta_ZOD[k,n]*np.pi/180)
-                       r_rx = self.car2sph(1, phi_AOA[k,n]*np.pi/180, theta_ZOA[k,n]*np.pi/180)
+                       r_tx = self.sph2cart(1, phi_AOD[k,n]*np.pi/180, theta_ZOD[k,n]*np.pi/180)
+                       r_rx = self.sph2cart(1, phi_AOA[k,n]*np.pi/180, theta_ZOA[k,n]*np.pi/180)
                        d_tx = np.squeeze(self.sat_location)
                        d_rx = np.squeeze(self.ue_location[i]) # rx vector of UE i
                        lambda_0 = sc.speed_of_light/self.f_c
@@ -576,16 +612,25 @@ class sat_three_gpp_channel_model(object):
                    F_ue = get_ue_antenna_field_pattern(np.array([LOS_ZOA*np.pi/180]), 
                                                        np.array([LOS_AOA*np.pi/180]), 
                                                        ue_rot_angle, 
-                                                       slant_angle*np.pi/180)
-                   F_sat = get_sate_antenna_field_pattern(np.array([LOS_ZOD*np.pi/180]), 
-                                                          np.array([LOS_AOD*np.pi/180]), 
-                                                          self.sat_ant_radius, self.f_c)
+                                                       slant_angle*np.pi/180,
+                                                       ant_pattern = self.ue_ant_pattern)
+                   
+                   F_sat, sat_ant_gain_los = get_sat_antenna_field_pattern(np.array([LOS_ZOD*np.pi/180]), 
+                                                          np.array([LOS_AOD*np.pi/180]),
+                                                          self.sat_beam_direction,
+                                                          self.sat_ant_radius, 
+                                                          self.f_c,
+                                                          return_gain= True)
+                   
+                  
+                  # sat_ant_gain_los_list[i] = 10*np.log10(sat_ant_gain_los)
+                  # print(sat_ant_gain_los_list[i],i)
                    
                    coupling_M = np.array([[1, 0],
                                          [0, -1]])
                    # because all LOS angles are in degree
-                   r_tx = self.car2sph(1, LOS_AOD*np.pi/180, LOS_ZOD*np.pi/180)
-                   r_rx = self.car2sph(1, LOS_AOA*np.pi/180, LOS_ZOA*np.pi/180)
+                   r_tx = self.sph2cart(1, LOS_AOD*np.pi/180, LOS_ZOD*np.pi/180)
+                   r_rx = self.sph2cart(1, LOS_AOA*np.pi/180, LOS_ZOA*np.pi/180)
                    d_tx = np.squeeze(self.sat_location)
                    d_rx = np.square(self.ue_location[i]) # rx vector of UE i
                    dist3D = np.linalg.norm(d_tx - d_rx)
@@ -611,18 +656,18 @@ class sat_three_gpp_channel_model(object):
                
            H_per_crossed_ant[slant_angle]  = H_list
            delay_per_crossed_ant[slant_angle] = delay_n_list
-           
+           #self.los_sat_ant_gain[slant_angle] = sat_ant_gain_los_list
        return H_per_crossed_ant, delay_per_crossed_ant
    
     
     def run(self):
        # run from step 1 to step 11 
-       a.step1()
-       a.step2_and_step3()
-       a.step4()
-       a.step5_and_step6()
-       a.step7_step8_step9()
-       H, delay = a.step10_step11()
+       self.step1()
+       self.step2_and_step3()
+       self.step4()
+       self.step5_and_step6()
+       self.step7_step8_step9()
+       H, delay = self.step10_step11()
        
        return H, delay    
 
@@ -642,6 +687,10 @@ if __name__ == "__main__":
     
     f_c = 2e9
     scenario = 'rural'
-    
-    a = sat_three_gpp_channel_model(scenario, sat_location, ue_location, f_c)
+    sat_beam_direction = [0,0,0] - sat_location[0]
+    a = sat_three_gpp_channel_model(scenario, sat_location, ue_location,sat_beam_direction, f_c)
     H, delay = a.run()
+    
+    
+    
+    
