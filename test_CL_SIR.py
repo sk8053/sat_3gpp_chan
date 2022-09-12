@@ -60,7 +60,7 @@ for i in tqdm(range(sat_beam_directions.shape[0])):
     CL_total.append(CL_all_linear)
 
 CL_list_new = np.max(CL_total, axis =0)    
-CL_table = pd.read_csv('CL_case9.csv')
+CL_table = pd.read_csv('data/CL_case9.csv')
 plt.figure()
 for key in CL_table.keys():
     data = CL_table[key]
@@ -70,6 +70,7 @@ plt.xlabel('Coupling Loss (dB)')
 plt.ylabel ('CDF')
 plt.grid()
 plt.legend()
+plt.savefig('plots/CL_test.png')
 
 CL_total = np.array(CL_total) # 61*61*10
 Rx_power = np.max(CL_total, axis =0)
@@ -78,7 +79,7 @@ interference = np.sum(CL_total, axis=0) - Rx_power
 SIR = 10*np.log10(Rx_power[:19]/interference[:19])
 SIR = SIR.reshape(-1)
 
-SIR_table = pd.read_csv('SIR_case9.csv')
+SIR_table = pd.read_csv('data/SIR_case9.csv')
 plt.figure()
 for key in SIR_table.keys():
     data = SIR_table[key]
@@ -89,6 +90,7 @@ plt.grid()
 plt.xlabel('SIR (dB)')
 plt.ylabel('CDF')
 plt.legend()
+plt.savefig('plots/SIR_test.png')
 
 
 
