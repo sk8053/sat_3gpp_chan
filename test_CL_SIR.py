@@ -25,7 +25,7 @@ sat_ant_diameter = 2 # [m], note that element gains are related to radius of sat
 beam_diameter = np.tan(np.deg2rad(HPBW)/2)*sat_height*2 # [m], beam diameter = height*sin(HPBW/2)*2*cos(30) = height *ABS
 beam_radius = beam_diameter/2
 
-n_ue_per_cell = 100
+n_ue_per_cell = 30
 ue_location, center_point_list,_ = create_hexagonal_grid(5, beam_radius, 
                                                          n_ue_per_cell=n_ue_per_cell)
 
@@ -46,17 +46,12 @@ for i in tqdm(range(sat_beam_directions.shape[0])):
     sat_los_gain =  a.step1(return_sat_gain=True)
     a.step2_and_step3()
     sat_los_gain = 10*np.log10(sat_los_gain)
-    
+
     CL_all_ = sat_los_gain - a.path_loss + sat_max_ant_gain 
+    CL_all_ = CL_all_.reshape(-1, n_ue_per_cell)
+    CL_list = np.append(CL_list, -CL_all_[i,:])
     
-    CL_all = -(10*np.log10(10**(0.1*CL_all_)))
-    CL_all = CL_all.reshape(-1, n_ue_per_cell)
-    ind = np.argmin(CL_all, axis = 0)
-    
-    CL_list = np.append(CL_list, CL_all[i,:])
-    
-    
-    CL_all_linear = 10**(-0.1*CL_all)
+    CL_all_linear = 10**(0.1*CL_all_)
     CL_total.append(CL_all_linear)
 
 CL_list_new = np.max(CL_total, axis =0)    

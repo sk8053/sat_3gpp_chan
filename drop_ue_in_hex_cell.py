@@ -23,9 +23,9 @@ def drop_uniform_in_hexagon(R:float, n_points:int =10, center_point:list = [0,0]
 
     Returns
     -------
-    u_xy : TYPE
+    u_xy : array
         ue locations in the hexagonal cell
-    hexagon_xy : TYPE
+    hexagon_xy : array
         locations of vertices of hexagon
 
     """
@@ -92,16 +92,18 @@ def create_hexagonal_grid(n_tier:int, R:float, n_ue_per_cell:int = 10,
 
     Returns
     -------
-    xy_list : TYPE
+    xy_list : array
        locations of all UEs dropped in hexagonal grids.
     center_point_list : TYPE
         center location of each cell
-    hex_xy_list : TYPE
+    hex_xy_list : array
         locations of hexagonal vertices
     """
     
     
-    colors = ['k','b','r','g','m','c','y','tab:gray']
+    #colors = ['k','b','r','g','m','c','y',
+    #          'tab:gray', 'tab:blue', 'darkblue','red', 'b','g','c']
+    colors = ['k']*n_tier
     xyz_list = []
     hex_xy_list = []
     center_point_list = []
@@ -116,42 +118,46 @@ def create_hexagonal_grid(n_tier:int, R:float, n_ue_per_cell:int = 10,
             if enable_plot is True:
                 plt.scatter(ue_xyz[:,0], ue_xyz[:,1], s= 5, c= c_)
                 plt.plot(hex_xy[:,0], hex_xy[:,1], c_)
-                plt.scatter(x,y, c = 'k')
+                plt.scatter(x,y, c = 'k', s= 8)
+                #plt.text(x, y, n+1,c = c_)
             
             xyz_list.append(ue_xyz)
             hex_xy_list.append(hex_xy)
             center_point_list.append([x,y,0])
             
         elif n>=1:
-            theta = np.pi/6 + 5*np.pi/3
+            theta = np.pi/2 
             prev_x, prev_y = np.cos(theta)*R_n, np.sin(theta)*R_n  
             for j  in range(6):
-                theta = np.pi/6 + j*np.pi/3
+                theta = np.pi/2 + (j+1)*np.pi/3 
                 x, y = center_cell_xy[0]+ np.cos(theta)*R_n, center_cell_xy[1]+np.sin(theta)*R_n
                 ue_xyz, hex_xy = drop_uniform_in_hexagon(R,n_ue_per_cell, center_point=[x,y])
                 
                 if enable_plot is True:
                     plt.scatter(ue_xyz[:,0], ue_xyz[:,1], s =5, c= c_)
                     plt.plot(hex_xy[:,0], hex_xy[:,1], c_)
-                    plt.scatter(x,y, c = 'k')
+                    plt.scatter(x,y, c = 'k', s= 8)
+                    #plt.text(x, y, n+1,c =c_)
                 
-                xyz_list.append(ue_xyz)
-                hex_xy_list.append(hex_xy)
-                center_point_list.append([x,y,0])
                 
                 for m in range(1,n):
                     x_new = (m*x + (n-m)*prev_x)/n + center_cell_xy[0]
                     y_new = (m*y + (n-m)*prev_y)/n + center_cell_xy[1]
-                    ue_xyz, hex_xy = drop_uniform_in_hexagon(R,n_ue_per_cell, center_point=[x_new,y_new])
+                    ue_xyz_new, hex_xy_new = drop_uniform_in_hexagon(R,n_ue_per_cell, center_point=[x_new,y_new])
                    
                     if enable_plot is True:
-                        plt.scatter(ue_xyz[:,0], ue_xyz[:,1],s = 5,c=c_)
-                        plt.plot(hex_xy[:,0], hex_xy[:,1], c_)
-                        plt.scatter(x_new,y_new, c = 'k')
+                        plt.scatter(ue_xyz_new[:,0], ue_xyz_new[:,1],s = 5,c=c_)
+                        plt.plot(hex_xy_new[:,0], hex_xy_new[:,1], c_)
+                        plt.scatter(x_new,y_new, c = 'k', s =8)
+                        #plt.text(x_new, y_new, n+1, c=c_)
                     
-                    xyz_list.append(ue_xyz)
-                    hex_xy_list.append(hex_xy)
+                    xyz_list.append(ue_xyz_new)
+                    hex_xy_list.append(hex_xy_new)
                     center_point_list.append([x_new,y_new,0])
+                
+                xyz_list.append(ue_xyz)
+                hex_xy_list.append(hex_xy)
+                center_point_list.append([x,y,0])
                     
                 prev_x, prev_y = x, y
                 

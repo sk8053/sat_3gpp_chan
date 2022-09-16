@@ -551,8 +551,8 @@ class sat_three_gpp_channel_model(object):
                    # return-shape is (2,n_rays)
                    # set all input angles as radians because the generated angles are in degree
                    F_vec_ue_list = get_ue_antenna_field_pattern(theta_ZOA[:,n]*np.pi/180, phi_AOA[:,n]*np.pi/180, ue_rot_angle, slant_angle*np.pi/180)
-                   F_vec_sat_list = get_sat_antenna_field_pattern(theta_ZOD[:,n]*np.pi/180,
-                                                                   phi_AOD[:,n]*np.pi/180, 
+                   F_vec_sat_list = get_sat_antenna_field_pattern(np.array(theta_ZOD)[:,n]*np.pi/180,
+                                                                   np.array(phi_AOD)[:,n]*np.pi/180, 
                                                                    self.sat_beam_direction,
                                                                    self.sat_ant_radius, 
                                                                    self.f_c)
@@ -649,7 +649,7 @@ class sat_three_gpp_channel_model(object):
                    H_n_cluster[0] = np.sqrt(K/(K+1))*H_los + np.sqrt(1/(K+1))*H_n_cluster[0]
                    
                # step 12: apply pathloss and shadowing for the channel coefficients
-               path_loss_lin_i = 10**(-0.1*self.path_loss[i])
+               path_loss_lin_i = 10**(-0.05*self.path_loss[i])
                H_list.append(path_loss_lin_i* np.array(H_n_cluster))
                
                delay_n_list.append(tau_n_cluster_new)
@@ -668,7 +668,7 @@ class sat_three_gpp_channel_model(object):
        self.step5_and_step6()
        self.step7_step8_step9()
        H, delay = self.step10_step11()
-       
+      
        return H, delay    
 
            

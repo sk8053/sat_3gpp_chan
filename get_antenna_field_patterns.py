@@ -46,9 +46,10 @@ def sat_antenna_power_pattern(theta:list(), radius:float, f_c:float=2e9):
     # antenna element gain by 3GPP 38.811, 6.4.1
     
     # theta, phi are radians
-    theta = np.squeeze(theta)
+    if np.ndim(theta) !=1:
+        theta = np.squeeze(theta)
     k = 2*np.pi*f_c/sc.speed_of_light
-    
+   
     g = np.zeros(len(theta))
     g[theta==0] = 1
     y = sp.jv(1, k*radius*np.sin(theta[theta !=0]))
@@ -80,6 +81,10 @@ def get_sat_antenna_field_pattern(theta:list(), phi:list(),
                                    beam_direction:list(), radius:float, f_c:float
                                    , return_gain:bool = False):
     # theta, phi are radians
+    if np.isscalar(theta):
+        theta = np.array([theta])
+    if np.isscalar(phi):
+        phi = np.array([phi])
     # beam_direction: [x,y,z], boresight direction of satellite antenna
     xyz_array = sph2cart(1, theta, phi) # (3, number of thetas)
     beam_direction = beam_direction/np.linalg.norm(beam_direction)
