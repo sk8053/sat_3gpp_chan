@@ -28,7 +28,7 @@ for i in range(hex_xy.shape[0]):
         
     if i in indice_list_new:
         plt.scatter(center_points[i][0], center_points[i][1], c= 'r')
-        plt.scatter(center_points[i][0], center_points[i][1]+y, c= 'r')
+       # plt.scatter(center_points[i][0], center_points[i][1]+y, c= 'r')
        
     
     plt.plot(hex_xy[i][:,0], hex_xy[i][:,1], 'k')
@@ -42,5 +42,6 @@ for i in range(hex_xy.shape[0]):
     #plt.plot(hex_xy[i][:,0]-x, hex_xy[i][:,1]-y/2, 'k')
     
 plt.grid()
-
+plt.savefig('plots/show_overlapped_area.jpg')
+#plt.savefig('plots/show_overall_deployment.jpg')
 
