@@ -79,6 +79,7 @@ def sph2cart(r:list(), theta:list(), phi:list()):
 
 def get_sat_antenna_field_pattern(theta:list(), phi:list(),
                                    beam_direction:list(), radius:float, f_c:float
+                                   , polorization_type = 'RHCP'
                                    , return_gain:bool = False):
     # theta, phi are radians
     if np.isscalar(theta):
@@ -93,9 +94,14 @@ def get_sat_antenna_field_pattern(theta:list(), phi:list(),
     g = sat_antenna_power_pattern(theta, radius, f_c)
     # relationship between power pattern and field pattern 
     # g = |F_theta|^2 + |F_phi|^2 # 3GPP 38.901, 7.3.2
+    
     # assume circular polarization 
-    F_theta = np.sqrt(g/2)
-    F_phi = 1j*np.sqrt(g/2)
+    if polorization_type == 'RHCP':
+        F_theta = np.sqrt(g/2)
+        F_phi = 1j*np.sqrt(g/2)
+    else:
+        F_theta = np.sqrt(g/2)
+        F_phi = -1j*np.sqrt(g/2)
     
     F_vec = np.vstack((F_theta, F_phi))
     

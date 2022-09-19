@@ -36,8 +36,8 @@ def drop_uniform_in_hexagon(R:float, n_points:int =10, center_point:list = [0,0]
     
     # generate three times more points to consider removing some points 
     # that are placed outside the hexagonal cell
-    u_x = np.random.uniform(0,1,n_points*2)*x_len
-    u_y = np.random.uniform(0,1,n_points*2) *y_len
+    u_x = np.random.uniform(0,1,n_points*5)*x_len
+    u_y = np.random.uniform(0,1,n_points*5) *y_len
     u_xyz = np.column_stack((u_x,u_y, [0]*len(u_x)))
     
     x = u_xyz[:,0]

@@ -25,7 +25,7 @@ class sat_three_gpp_channel_model(object):
         self.ue_ant_pattern = ue_ant_pattern
         self.r_velocity = np.repeat([[1,1,1]], len(self.ue_location), axis =0)
         self.ant_slant_angle_list = [45, -45]
-        
+        self.pol_type_list = ['RHCP', 'LHCP']
         self.time = 0
         self.force_LOS = False
         
@@ -516,7 +516,7 @@ class sat_three_gpp_channel_model(object):
        #self.los_sat_ant_gain = {} # this variable is used for only verification
        
        # get channel for each antenna from X-pole antennas
-       for slant_angle in self.ant_slant_angle_list:
+       for slant_angle, pol_type in zip(self.ant_slant_angle_list, self.pol_type_list):
            delay_n_list = [] # list containing all the cluster delays for each link
            H_list = [] # list containing all channel coefficient per each cluster
            for i in range (len(self.link_state)): 
@@ -549,13 +549,15 @@ class sat_three_gpp_channel_model(object):
                H_n_cluster = []
                for n in range(n_clusters):
                    # return-shape is (2,n_rays)
+                   
                    # set all input angles as radians because the generated angles are in degree
                    F_vec_ue_list = get_ue_antenna_field_pattern(theta_ZOA[:,n]*np.pi/180, phi_AOA[:,n]*np.pi/180, ue_rot_angle, slant_angle*np.pi/180)
                    F_vec_sat_list = get_sat_antenna_field_pattern(np.array(theta_ZOD)[:,n]*np.pi/180,
                                                                    np.array(phi_AOD)[:,n]*np.pi/180, 
                                                                    self.sat_beam_direction,
                                                                    self.sat_ant_radius, 
-                                                                   self.f_c)
+                                                                   self.f_c,
+                                                                   polorization_type = pol_type)
                    P_n = self.P_n_list_without_K[i][n]
                    
                    for k in range(n_rays):
@@ -620,6 +622,7 @@ class sat_three_gpp_channel_model(object):
                                                           self.sat_beam_direction,
                                                           self.sat_ant_radius, 
                                                           self.f_c,
+                                                          polorization_type = pol_type,
                                                           return_gain= True)
                    
                   

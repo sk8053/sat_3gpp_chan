@@ -61,11 +61,11 @@ for i in tqdm(range(sat_beam_directions.shape[0])):
     a = sat_three_gpp_channel_model(scenario, sat_location, 
                         ue_location,sat_beam_directions[i], f_c)
     chan_instant_list.append(a)
-    sat_los_gain =  a.step1(return_sat_gain=True)
+    sat_ant_gain =  a.step1(return_sat_gain=True)
     a.step2_and_step3()
-    sat_los_gain = 10*np.log10(sat_los_gain)
+    sat_ant_gain = 10*np.log10(sat_ant_gain)
     
-    CL_all_ = sat_los_gain - a.path_loss + sat_max_ant_gain 
+    CL_all_ = sat_ant_gain - a.path_loss + sat_max_ant_gain 
     CL_all_ = CL_all_.reshape(-1, n_ue_per_cell)
     CL_list = np.append(CL_list, -CL_all_[i,:])
     
