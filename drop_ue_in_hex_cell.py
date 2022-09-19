@@ -162,7 +162,81 @@ def create_hexagonal_grid(n_tier:int, R:float, n_ue_per_cell:int = 10,
                 prev_x, prev_y = x, y
                 
     return xyz_list, center_point_list, hex_xy_list
-                    
-        
-            
+
+def get_FRF3_indices(n_tier, enable_plot:bool = False):
     
+    ue_xyz_list, center_point_list, hex_xy_list = create_hexagonal_grid(n_tier, 23e3)
+    ue_xyz_list = np.array(ue_xyz_list)
+    center_point_list = np.array(center_point_list)
+    hex_xy_list = np.array(hex_xy_list)
+    color_set= np.array(['r','g','b'])
+    
+    color_to_cell = np.array(['r','g','b','g','b','g','b']) # the color of first and second tiers
+    prev_tier_len = 6
+    end_tier_colors = ['r', 'b'] # color of cell 1 and 7
+    
+    for n_tier_ind  in range(n_tier):
+        
+        if n_tier_ind == 0:
+            ind_range = [0]
+        else:
+            ind_range = np.arange(3*n_tier_ind*(n_tier_ind-1)+1,
+                                  3*n_tier_ind*(n_tier_ind+1)+1)
+        end_ind = ind_range[-1] #+1
+        start_ind = ind_range[0]
+        
+        if n_tier_ind <=1:
+            for i in ind_range:
+                if enable_plot is True:
+                    plt.scatter(center_point_list[i][0],center_point_list[i][1], c = 'k')
+                    plt.text(center_point_list[i][0],center_point_list[i][1], i+1, c = 'k',size=7)
+                    plt.fill(hex_xy_list[i][:,0], hex_xy_list[i][:,1], c = color_to_cell[i])
+        else:
+            I = ((np.array(color_set) != end_tier_colors[n_tier_ind-1]) 
+            & (np.array(color_set) != end_tier_colors[n_tier_ind-2]))
+            end_color =color_set[I]
+            end_tier_colors = np.append(end_tier_colors, end_color)
+            I_end = I
+            
+            for j, i in enumerate(ind_range):
+                if i== end_ind:
+                    I = I_end
+                    
+                elif i == start_ind:
+                    I = ((np.array(color_set) != end_color) 
+                    & (np.array(color_set) != end_tier_colors[n_tier_ind-1])
+                    & (np.array(color_set) != color_to_cell[i-prev_tier_len]))
+                    
+                elif (i+1)%n_tier_ind ==0 and i+1 == end_ind:
+                    I = ((np.array(color_set) != color_to_cell[-1]) 
+                    & (np.array(color_set) != color_to_cell[i-prev_tier_len - int(j/n_tier_ind)])
+                    & (np.array(color_set) != color_to_cell[i-prev_tier_len-1-int(j/n_tier_ind)])
+                    & (np.array(color_set) != end_color))
+                    
+                elif (i+1)%n_tier_ind==0 and i != start_ind:
+                    I = ((np.array(color_set) != color_to_cell[-1]) 
+                    & (np.array(color_set) != color_to_cell[i-prev_tier_len+1 - int(j/n_tier_ind)])
+                    & (np.array(color_set) != color_to_cell[i-prev_tier_len-int(j/n_tier_ind)]))
+                    
+                else:
+                    I = ((np.array(color_set) != color_to_cell[-1]) 
+                    & (np.array(color_set) != color_to_cell[i-prev_tier_len-int(j/n_tier_ind)-1]))
+                    
+                
+                color_to_cell = np.append(color_to_cell, color_set[I])
+                
+                if enable_plot is True:
+                    plt.scatter(center_point_list[i][0],center_point_list[i][1], c = 'k')
+                    plt.text(center_point_list[i][0],center_point_list[i][1], i+1, c = 'k', size=7)
+                    plt.fill(hex_xy_list[i][:,0], hex_xy_list[i][:,1], c = color_set[I][0])
+                
+        prev_tier_len = len(ind_range)
+        
+    red_group = np.where(color_to_cell == 'r')[0]
+    blue_group = np.where(color_to_cell == 'b')[0]
+    green_group = np.where(color_to_cell == 'g')[0]
+    
+    return red_group, blue_group, green_group
+
+#if __name__ == "__main__":
+#    r,b,g = get_FRF3_indices(7, True)        
