@@ -112,7 +112,7 @@ for link_idx in range(len(H[45])):
         h_n_45_list[link_idx, beam_idx,:] = h_n_45
 
 SINR_avg_list = []    
-for link_idx in range(len(H[45])):
+for link_idx in tqdm(range(len(H[45]))):
     serv_beam_idx = associ_indices[link_idx]
     #serv_beam_idx = int(np.floor(link_idx/10))
    # print(serv_beam_idx)
@@ -138,6 +138,9 @@ for link_idx in range(len(H[45])):
     
     SINR_avg_list.append(10*np.log10(Tx_power_lin*rx_power_avg
                                      /(Tx_power_lin*itf_power_avg+noise_power)))
+    
+    if link_idx ==123:
+        print(rx_power_avg, itf_power_avg)
 
 # outside tiers are used only for wrap-around mechanism
 # we only consider UEs deployed in 19 center cells, inside 3 tiers

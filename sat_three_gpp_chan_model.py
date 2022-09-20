@@ -654,7 +654,7 @@ class sat_three_gpp_channel_model(object):
                    H_n_cluster[0] = np.sqrt(K/(K+1))*H_los + np.sqrt(1/(K+1))*H_n_cluster[0]
                    
                # step 12: apply pathloss and shadowing for the channel coefficients
-               self.path_loss[i] += np.random.normal(0,1)*self.SF_list[i]
+               self.path_loss[i] += np.random.normal(0,abs(self.SF_list[i]))
                path_loss_lin_i = 10**(-0.05*self.path_loss[i])
                H_list.append(path_loss_lin_i* np.array(H_n_cluster))
                

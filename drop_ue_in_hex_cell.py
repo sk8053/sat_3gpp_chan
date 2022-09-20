@@ -29,7 +29,7 @@ def drop_uniform_in_hexagon(R:float, n_points:int =10, center_point:list = [0,0]
         locations of vertices of hexagon
 
     """
- 
+
     
     x_len = 2*R
     y_len = np.sqrt(3)*R
@@ -38,6 +38,7 @@ def drop_uniform_in_hexagon(R:float, n_points:int =10, center_point:list = [0,0]
     # that are placed outside the hexagonal cell
     u_x = np.random.uniform(0,1,n_points*5)*x_len
     u_y = np.random.uniform(0,1,n_points*5) *y_len
+    
     u_xyz = np.column_stack((u_x,u_y, [0]*len(u_x)))
     
     x = u_xyz[:,0]
