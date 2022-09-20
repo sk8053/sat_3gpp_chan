@@ -225,7 +225,7 @@ class sat_three_gpp_channel_model(object):
             mu_DS, sig_DS, mu_ASD, sig_ASD, mu_ASA, sig_ASA, \
             mu_ZSA, sig_ZSA, mu_ZSD, sig_ZSD, mu_K, sig_K  = spread_matrix[:,i]
             sig_SF_LOS, sig_SF_NLOS,_ = shadow_CL_table[i]
-     
+            
             # NOTE 8 from 3GPP 38.811 6.7.2
             # For satellite (GEO/LEO), the departure angle spreads are zeros, i.e., 
             # mu_asd and mu_zsd = -inf, -inf
@@ -248,6 +248,7 @@ class sat_three_gpp_channel_model(object):
                 # Note that SF and K are in dB-scale, and others are in linear scale
                 DS = 10**(mu_DS + sig_DS*sf_k_ds_asd_asa_zsd_zsa[2])
                 K = 10**(0.1*(mu_K + sig_K*sf_k_ds_asd_asa_zsd_zsa[1])) # dB -> linear
+                
                 SF = mu_SF + sig_SF_LOS *sf_k_ds_asd_asa_zsd_zsa[0] # keep dB-scale         
                 ASD = 10**(mu_ASD + sig_ASD*sf_k_ds_asd_asa_zsd_zsa[3])
                 ASA = 10**(mu_ASA + sig_ASA*sf_k_ds_asd_asa_zsd_zsa[4])
@@ -526,6 +527,7 @@ class sat_three_gpp_channel_model(object):
                             ,'beta':np.random.uniform(0,360, 1)*np.pi/180,
                             'gamma':np.random.uniform(0,360, 1)*np.pi/180}
                
+               
                n_rays, n_clusters = self.angle_data[i]['AOA_cluster_rays'].shape
                theta_ZOA, phi_AOA = self.angle_data[i]['ZOA_cluster_rays'], self.angle_data[i]['AOA_cluster_rays']
                theta_ZOD, phi_AOD = self.angle_data[i]['ZOD_cluster_rays'], self.angle_data[i]['AOD_cluster_rays']
@@ -652,6 +654,7 @@ class sat_three_gpp_channel_model(object):
                    H_n_cluster[0] = np.sqrt(K/(K+1))*H_los + np.sqrt(1/(K+1))*H_n_cluster[0]
                    
                # step 12: apply pathloss and shadowing for the channel coefficients
+               self.path_loss[i] += np.random.normal(0,1)*self.SF_list[i]
                path_loss_lin_i = 10**(-0.05*self.path_loss[i])
                H_list.append(path_loss_lin_i* np.array(H_n_cluster))
                

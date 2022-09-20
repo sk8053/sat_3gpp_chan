@@ -26,15 +26,15 @@ def GCS_LCS_conversion(rot_angle:dict(), theta:list(), phi:list()):
     theta_prime = np.arccos(np.cos(beta)*np.cos(gamma)*np.cos(theta) + 
                             (np.sin(beta)*np.cos(gamma)*np.cos(phi-alpha) - 
                              np.sin(gamma)*np.sin(phi-alpha))*np.sin(theta)) #7.1-7
-    a_jb = (np.cos(beta)*np.sin(theta)*np.cos(phi-alpha) - np.sin(beta)*np.cos(theta))\
-        +1j*(np.cos(beta)*np.sin(gamma)*np.cos(theta) 
+    a_jb = (np.cos(beta)*np.sin(theta)*np.cos(phi-alpha) - np.sin(beta)*np.cos(theta)\
+            +1j*(np.cos(beta)*np.sin(gamma)*np.cos(theta)
              + (np.sin(beta)*np.sin(gamma)*np.cos(phi-alpha) 
-                + np.cos(gamma)*np.sin(phi-alpha))*np.sin(theta))
+                + np.cos(gamma)*np.sin(phi-alpha))*np.sin(theta)))
     phi_prime = np.angle(a_jb) # 7.1-8
     
     a_jb2 = (np.sin(gamma)*np.cos(theta)*np.sin(phi-alpha) + np.cos(gamma)*
-             (np.cos(beta)*np.sin(theta) - np.sin(beta)*np.cos(theta)*np.cos(phi-alpha)))\
-        + 1j*(np.sin(gamma)*np.cos(phi-alpha) + np.sin(beta)*np.cos(gamma)*np.sin(phi-alpha))
+             (np.cos(beta)*np.sin(theta) - np.sin(beta)*np.cos(theta)*np.cos(phi-alpha))\
+        + 1j*(np.sin(gamma)*np.cos(phi-alpha) + np.sin(beta)*np.cos(gamma)*np.sin(phi-alpha)))
     Psi = np.angle(a_jb2) # 7.1-15
     
     # return local angles and rotation angle
@@ -49,7 +49,7 @@ def sat_antenna_power_pattern(theta:list(), radius:float, f_c:float=2e9):
     if np.ndim(theta) !=1:
         theta = np.squeeze(theta)
     k = 2*np.pi*f_c/sc.speed_of_light
-   
+    
     g = np.zeros(len(theta))
     g[theta==0] = 1
     y = sp.jv(1, k*radius*np.sin(theta[theta !=0]))
@@ -91,6 +91,7 @@ def get_sat_antenna_field_pattern(theta:list(), phi:list(),
     beam_direction = beam_direction/np.linalg.norm(beam_direction)
     # get angle between departure ray and boresight direction of satelliet antenna
     theta = np.arccos(xyz_array.T.dot(beam_direction))
+    
     g = sat_antenna_power_pattern(theta, radius, f_c)
     # relationship between power pattern and field pattern 
     # g = |F_theta|^2 + |F_phi|^2 # 3GPP 38.901, 7.3.2
@@ -122,7 +123,7 @@ def get_ue_antenna_field_pattern(theta:list(), phi:list(), rot_angle:dict()
     # with a certain slant angle
     rot_angle2 = dict()
     rot_angle2['alpha'] =0
-    rot_angle2['beta'] = slant_angle
+    rot_angle2['beta'] =  slant_angle
     rot_angle2['gamma'] = 0
     local_angle2, Psi_prime2 = GCS_LCS_conversion(rot_angle2, theta_prime, phi_prime)
     

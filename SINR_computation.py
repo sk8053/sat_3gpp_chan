@@ -35,14 +35,15 @@ sat_ant_diameter = 2 # [m], note that element gains are related to radius of sat
 beam_diameter = np.tan(np.deg2rad(HPBW)/2)*sat_height*2 # [m], beam diameter = height*sin(HPBW/2)*2*cos(30) = height *ABS
 beam_radius = beam_diameter/2
 
-n_ue_per_cell = 50
-ue_location, center_point_list,_ = create_hexagonal_grid(3, beam_radius, 
+n_ue_per_cell = 10
+ue_location, center_point_list,_ = create_hexagonal_grid(5, beam_radius, 
                                                          n_ue_per_cell=n_ue_per_cell)
 
 ue_location = np.array(ue_location).reshape(-1,3)
 center_points_hex_cells_xyz = np.array(center_point_list)
 
 sat_location = np.array([[0,0, sat_height]])
+
 sat_beam_directions = center_points_hex_cells_xyz - sat_location
 
 CL_list = np.array([])
@@ -54,7 +55,7 @@ total_n_carrier = np.floor(BW/subcarrier_spacing)
 #f_list = np.arange(-330,330)*15e3 # 10MHz
 
 f_list = np.arange(-np.floor(total_n_carrier/2),
-                   np.floor(total_n_carrier/2))*15e3 # 10MHz
+                   np.floor(total_n_carrier/2))*15e3 + f_c # 10MHz
 chan_instant_list = []
 
 for i in tqdm(range(sat_beam_directions.shape[0])):    
@@ -94,13 +95,15 @@ h_n_45_list = np.zeros(shape=[len(H[45]),len(chan_instant_list), len(f_list)], d
 # (n_link, n_beams, n_frequencies)
 for link_idx in range(len(H[45])): 
 # for each link, compute SINR per sub-carrier
-    h_45, h_n_45 = 0,0
+    
     # compute chanel-frequency response corresponding to each subcarrier
     associated_beam_idx = associ_indices[link_idx]
     power_list = []
     for beam_idx in range(len(chan_instant_list)):
         H = H_list[beam_idx]
         delay = delay_list[beam_idx]
+        h_45 = 0
+        h_n_45 =0
         for cluster_idx in range(len(H[45][link_idx])):
             h_45 = h_45 + H[45][link_idx][cluster_idx]*np.exp(-1j*2*np.pi*f_list*np.array(delay[45][link_idx][cluster_idx]))
             h_n_45 = h_n_45 + H[-45][link_idx][cluster_idx]*np.exp(-1j*2*np.pi*f_list*np.array(delay[-45][link_idx][cluster_idx]))
@@ -111,22 +114,23 @@ for link_idx in range(len(H[45])):
 SINR_avg_list = []    
 for link_idx in range(len(H[45])):
     serv_beam_idx = associ_indices[link_idx]
-    itf_f =0 
+    #serv_beam_idx = int(np.floor(link_idx/10))
+   # print(serv_beam_idx)
+    itf_f =0
     rx_power_f = 0
     
     for f_idx in range(len(f_list)):
         h_serv1 = h_45_list[link_idx,serv_beam_idx,f_idx] 
-        h_serv2 = h_n_45_list[link_idx,serv_beam_idx,f_idx]      
+        h_serv2 = h_n_45_list[link_idx,serv_beam_idx,f_idx]
         w = [h_serv1, h_serv2]
         w = w/np.linalg.norm(w)
-        rx_power_f += np.linalg.norm([h_serv1, h_serv2])**2    
+        rx_power_f += np.linalg.norm([h_serv1, h_serv2])**2
         itf = 0
         for beam_idx in range(len(chan_instant_list)):
             if beam_idx != serv_beam_idx:
                 h_itf1 = h_45_list[link_idx,beam_idx,f_idx] 
                 h_itf2 = h_n_45_list[link_idx,beam_idx,f_idx] 
-                itf += abs(np.dot(np.conj(w), [h_itf1, h_itf2]))**2
-                
+                itf += abs(np.dot(np.conj(w), [h_itf1, h_itf2]))**2                
         itf_f += itf
         
     rx_power_avg = rx_power_f/len(f_list)
@@ -135,4 +139,8 @@ for link_idx in range(len(H[45])):
     SINR_avg_list.append(10*np.log10(Tx_power_lin*rx_power_avg
                                      /(Tx_power_lin*itf_power_avg+noise_power)))
 
-plt.plot(np.sort(SINR_avg_list), np.linspace(0,1,len(SINR_avg_list)))
+# outside tiers are used only for wrap-around mechanism
+# we only consider UEs deployed in 19 center cells, inside 3 tiers
+plt.plot(np.sort(SINR_avg_list[:19*n_ue_per_cell]), 
+         np.linspace(0,1,len(SINR_avg_list[:19*n_ue_per_cell])))
+plt.grid()
