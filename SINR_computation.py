@@ -139,11 +139,14 @@ for link_idx in tqdm(range(len(H[45]))):
     SINR_avg_list.append(10*np.log10(Tx_power_lin*rx_power_avg
                                      /(Tx_power_lin*itf_power_avg+noise_power)))
     
-    if link_idx ==123:
-        print(rx_power_avg, itf_power_avg)
+    if link_idx ==122 or link_idx ==123:
+        #print(rx_power_avg, itf_power_avg)
+        print(link_idx, h_serv1)
+        print(link_idx, h_serv2)
 
 # outside tiers are used only for wrap-around mechanism
 # we only consider UEs deployed in 19 center cells, inside 3 tiers
 plt.plot(np.sort(SINR_avg_list[:19*n_ue_per_cell]), 
          np.linspace(0,1,len(SINR_avg_list[:19*n_ue_per_cell])))
+plt.xlim([-30, 15])
 plt.grid()
