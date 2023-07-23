@@ -322,8 +322,9 @@ class sat_three_gpp_channel_model(object):
             self.P_n_list_without_K.append(list(P_n))
             
             if link_state_i ==1: #if LOS
+                P_n *= 1/(self.K_list[i]+1)
                 P_n[0] += self.K_list[i]/(self.K_list[i]+1)
-                P_n[1:] *= 1/(self.K_list[i]+1)
+                
             self.P_n_list.append(list(P_n))  
         
         # remove cluster with less than -25 dB power compared to the maximum cluster power
