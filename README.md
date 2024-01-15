@@ -1,1 +1,1 @@
-This repository includes the implementation of 3GPP channel modeling for satellite communication links. All the implementation follows [3GPP TR 38.821](https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=3525).
+This repository includes the implementation of stochastic wireless channel modeling for satellite communication links. All the implementation follows [3GPP TR 38.821](https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=3525).
